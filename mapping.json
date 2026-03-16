@@ -1,0 +1,15 @@
+{
+  "subsidiary": {
+    "GeoComply Solutions Inc.": 5,
+    "GeoComply USA Inc.": 6
+  },
+  "currency": {
+    "Canadian Dollar": "CAD",
+    "US Dollar": "USD",
+    "CAD": "CAD"
+  },
+  "location": {
+    "CAN:Vancouver": "LOC_VAN_CA",
+    "VN": "LOC_VN_INTL"
+  }
+}
