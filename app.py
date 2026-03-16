@@ -1,35 +1,44 @@
-
 import io
 import json
 from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
 BASE_DIR = Path(__file__).parent
-OUTPUT_DIR = BASE_DIR / "output"
 MAPPING_PATH = BASE_DIR / "mapping.json"
 SAMPLE_PATH = BASE_DIR / "journal_entries.xlsx"
 
 st.set_page_config(page_title="JE Automation Demo", page_icon="📊", layout="wide")
 
+
 @st.cache_data
 def load_mapping():
-    with open(MAPPING_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    if not MAPPING_PATH.exists():
+        return None
+    try:
+        with open(MAPPING_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
 
 def normalize_date(series: pd.Series) -> pd.Series:
     parsed = pd.to_datetime(series, errors="coerce")
     return parsed.dt.strftime("%d/%m/%Y")
+
 
 def extract_account_code(account_value):
     if pd.isna(account_value):
         return None
     return str(account_value).split(" ")[0].strip()
 
+
 def validate_rows(df: pd.DataFrame) -> list[str]:
     errors = []
     required_cols = ["Subsidiary", "Date", "Account", "Debit", "Credit", "Location", "Currency"]
     missing_cols = [c for c in required_cols if c not in df.columns]
+
     if missing_cols:
         errors.append(f"Missing required columns: {', '.join(missing_cols)}")
         return errors
@@ -47,6 +56,7 @@ def validate_rows(df: pd.DataFrame) -> list[str]:
 
     total_debit = debit.sum()
     total_credit = credit.sum()
+
     if round(total_debit, 2) != round(total_credit, 2):
         errors.append(
             f"Batch is unbalanced. Total Debit = {total_debit:,.2f}, Total Credit = {total_credit:,.2f}"
@@ -59,14 +69,16 @@ def validate_rows(df: pd.DataFrame) -> list[str]:
 
     return errors
 
+
 def apply_mapping(df: pd.DataFrame, mapping: dict):
     out = df.copy()
 
-    out["Debit"] = pd.to_numeric(out["Debit"], errors="coerce")
-    out["Credit"] = pd.to_numeric(out["Credit"], errors="coerce")
-    out["Subsidiary_ID"] = out["Subsidiary"].map(mapping["subsidiary"])
-    out["Currency_Code"] = out["Currency"].map(mapping["currency"])
-    out["Location_Code"] = out["Location"].map(mapping["location"])
+    out["Debit"] = pd.to_numeric(out["Debit"], errors="coerce").fillna(0)
+    out["Credit"] = pd.to_numeric(out["Credit"], errors="coerce").fillna(0)
+
+    out["Subsidiary_ID"] = out["Subsidiary"].map(mapping.get("subsidiary", {}))
+    out["Currency_Code"] = out["Currency"].map(mapping.get("currency", {}))
+    out["Location_Code"] = out["Location"].map(mapping.get("location", {}))
     out["Account_Code"] = out["Account"].apply(extract_account_code)
     out["Normalized_Date"] = normalize_date(out["Date"])
 
@@ -89,11 +101,11 @@ def apply_mapping(df: pd.DataFrame, mapping: dict):
         "Location_Code",
         "Currency_Code",
     ]
-    payload = out[payload_cols].rename(
-        columns={"Normalized_Date": "Date"}
-    ).to_dict(orient="records")
+
+    payload = out[payload_cols].rename(columns={"Normalized_Date": "Date"}).to_dict(orient="records")
 
     return out, payload, unmapped
+
 
 def to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Results") -> bytes:
     buffer = io.BytesIO()
@@ -102,57 +114,87 @@ def to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Results") -> bytes:
     buffer.seek(0)
     return buffer.getvalue()
 
+
 st.title("📊 Journal Entry Automation Demo")
-st.caption("Proof-of-concept dashboard for GeoComply case study: Excel → Validation → Mapping → NetSuite-ready payload")
+st.caption(
+    "Proof-of-concept dashboard for GeoComply case study: Excel → Validation → Mapping → NetSuite-ready payload"
+)
 
 mapping = load_mapping()
 
 with st.sidebar:
     st.header("Demo Files")
     st.write("Use the sample file or upload your own Excel file.")
-    with open(SAMPLE_PATH, "rb") as f:
-        st.download_button(
-            "Download sample Excel",
-            data=f.read(),
-            file_name="journal_entries.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
-    with open(MAPPING_PATH, "rb") as f:
-        st.download_button(
-            "Download mapping.json",
-            data=f.read(),
-            file_name="mapping.json",
-            mime="application/json",
-            use_container_width=True,
-        )
+
+    if SAMPLE_PATH.exists():
+        try:
+            with open(SAMPLE_PATH, "rb") as f:
+                st.download_button(
+                    "Download sample Excel",
+                    data=f.read(),
+                    file_name="journal_entries.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
+        except Exception as e:
+            st.warning(f"Could not load sample Excel file: {e}")
+    else:
+        st.info("Sample Excel file not found in the project folder.")
+
+    if MAPPING_PATH.exists():
+        try:
+            with open(MAPPING_PATH, "rb") as f:
+                st.download_button(
+                    "Download mapping.json",
+                    data=f.read(),
+                    file_name="mapping.json",
+                    mime="application/json",
+                    use_container_width=True,
+                )
+        except Exception as e:
+            st.warning(f"Could not load mapping.json: {e}")
+    else:
+        st.warning("mapping.json file not found in the project folder.")
 
 uploaded = st.file_uploader("Upload a journal entry Excel file (.xlsx)", type=["xlsx"])
+
+if mapping is None:
+    st.error("mapping.json is missing or invalid. Please add a valid mapping.json file to your project folder.")
+    st.stop()
 
 if uploaded is None:
     st.info("Upload the sample Excel file from the sidebar to test the prototype.")
     st.stop()
 
 try:
-    df = pd.read_excel(uploaded)
+    df = pd.read_excel(uploaded, engine="openpyxl")
 except Exception as e:
     st.error(f"Could not read the Excel file: {e}")
     st.stop()
 
-tab1, tab2, tab3, tab4 = st.tabs(["Input Data", "Validation", "Mapping Preview", "NetSuite Payload"])
+required_cols = ["Subsidiary", "Date", "Account", "Debit", "Credit", "Location", "Currency"]
+missing_cols = [c for c in required_cols if c not in df.columns]
+
+if missing_cols:
+    st.error(f"Uploaded file is missing required columns: {', '.join(missing_cols)}")
+    st.stop()
+
+errors = validate_rows(df)
+mapped_df, payload, unmapped = apply_mapping(df, mapping)
+
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Input Data", "Validation", "Mapping Preview", "NetSuite Payload"]
+)
 
 with tab1:
     st.subheader("Uploaded Journal Entries")
     st.dataframe(df, use_container_width=True)
 
-errors = validate_rows(df)
-mapped_df, payload, unmapped = apply_mapping(df, mapping)
-
 with tab2:
     st.subheader("Validation Results")
 
-    total_debit = pd.to_numeric(df["Debit"], errors="coerce").fillna(0).sum() if "Debit" in df.columns else 0
-    total_credit = pd.to_numeric(df["Credit"], errors="coerce").fillna(0).sum() if "Credit" in df.columns else 0
+    total_debit = pd.to_numeric(df["Debit"], errors="coerce").fillna(0).sum()
+    total_credit = pd.to_numeric(df["Credit"], errors="coerce").fillna(0).sum()
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Total Debit", f"{total_debit:,.2f}")
@@ -168,6 +210,7 @@ with tab2:
 with tab3:
     st.subheader("Mapped Output")
     st.dataframe(mapped_df, use_container_width=True)
+
     if unmapped:
         st.warning("Some values could not be mapped:")
         st.json(unmapped)
@@ -182,13 +225,16 @@ st.divider()
 left, right = st.columns(2)
 
 with left:
-    st.download_button(
-        "Download mapped results (.xlsx)",
-        data=to_excel_bytes(mapped_df, sheet_name="Mapped Results"),
-        file_name="mapped_journal_entries.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True,
-    )
+    try:
+        st.download_button(
+            "Download mapped results (.xlsx)",
+            data=to_excel_bytes(mapped_df, sheet_name="Mapped Results"),
+            file_name="mapped_journal_entries.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+    except Exception as e:
+        st.warning(f"Could not generate Excel download: {e}")
 
 with right:
     st.download_button(

@@ -1,0 +1,20 @@
+[
+  {
+    "Subsidiary_ID": 5,
+    "Date": "28/02/2026",
+    "Account_Code": "721100",
+    "Debit": 6612.0,
+    "Credit": NaN,
+    "Location_Code": "LOC_VAN_CA",
+    "Currency_Code": "CAD"
+  },
+  {
+    "Subsidiary_ID": 5,
+    "Date": "28/02/2026",
+    "Account_Code": "213003",
+    "Debit": NaN,
+    "Credit": 6612.0,
+    "Location_Code": "LOC_VAN_CA",
+    "Currency_Code": "CAD"
+  }
+]
