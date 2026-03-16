@@ -1,38 +1,65 @@
-# JE Automation Dashboard Demo
+# JE Automation Dashboard
 
-This is a small proof-of-concept for your GeoComply case study.
+## Overview
 
-## Run locally
+The **JE Automation Dashboard** is an interactive analytics tool designed to improve visibility into the **journal entry (JE) workflow** used in finance operations.
 
-1. Open the folder in VS Code
-2. Create a virtual environment if you want
-3. Install packages:
+In many organizations, journal entry processing involves multiple manual steps such as submission, validation, approval, and posting to the accounting system. These processes are often tracked through spreadsheets or disconnected tools, which makes it difficult to monitor progress and identify operational bottlenecks.
 
-```bash
-pip install -r requirements.txt
-```
+This project demonstrates how **automation and data visualization** can streamline finance workflows and provide better transparency into operational processes.
 
-4. Run the dashboard:
+---
 
-```bash
-streamlit run app.py
-```
+## Problem
 
-5. Or run the backend script:
+Finance teams often process **large volumes of journal entries** during daily operations and month-end close.
 
-```bash
-python pipeline.py
-```
+Common challenges include:
 
-## Demo flow
+- Limited visibility into journal entry status  
+- Manual tracking using spreadsheets  
+- Delays in approval workflows  
+- Difficulty identifying bottlenecks in the process  
+- Lack of centralized monitoring tools  
 
-- Upload `journal_entries.xlsx`
-- Show the Validation tab
-- Show the Mapping Preview tab
-- Show the NetSuite Payload tab
+These inefficiencies can slow down financial operations and increase the risk of errors.
 
-This demonstrates:
-- debit / credit balancing
-- mapping logic
-- date normalization
-- NetSuite-ready transformation
+---
+
+## Solution
+
+The **JE Automation Dashboard** provides a centralized interface to monitor and analyze journal entry activity.
+
+The dashboard allows users to:
+
+- Track journal entry submissions  
+- Monitor workflow status  
+- Analyze processing volumes  
+- Identify operational bottlenecks  
+- Gain insights into workflow performance  
+
+By consolidating workflow information into a single interactive dashboard, teams can make **faster and more informed operational decisions**.
+
+---
+
+## Key Features
+
+- Interactive dashboard for finance workflow monitoring  
+- Journal entry volume tracking  
+- Workflow status visualization  
+- Bottleneck identification  
+- Operational insights through data analytics  
+- Lightweight prototype built with Streamlit  
+
+---
+
+## Technology Stack
+
+- Python  
+- Streamlit  
+- Pandas  
+- NumPy  
+- Plotly / Matplotlib  
+
+
+
