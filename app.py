@@ -120,6 +120,12 @@ st.caption(
     "Proof-of-concept dashboard for GeoComply case study: Excel → Validation → Mapping → NetSuite-ready payload"
 )
 
+st.write("Base directory:", BASE_DIR)
+try:
+    st.write("Files in project folder:", [p.name for p in BASE_DIR.iterdir()])
+except Exception as e:
+    st.warning(f"Could not inspect project folder: {e}")
+
 mapping = load_mapping()
 
 with st.sidebar:
@@ -162,12 +168,19 @@ if mapping is None:
     st.error("mapping.json is missing or invalid. Please add a valid mapping.json file to your project folder.")
     st.stop()
 
-if uploaded is None:
-    st.info("Upload the sample Excel file from the sidebar to test the prototype.")
+excel_source = None
+
+if uploaded is not None:
+    excel_source = uploaded
+elif SAMPLE_PATH.exists():
+    excel_source = SAMPLE_PATH
+    st.info("No file uploaded. Using built-in sample Excel file for demo.")
+else:
+    st.error("No uploaded file found and sample Excel file is missing from the project folder.")
     st.stop()
 
 try:
-    df = pd.read_excel(uploaded, engine="openpyxl")
+    df = pd.read_excel(excel_source, engine="openpyxl")
 except Exception as e:
     st.error(f"Could not read the Excel file: {e}")
     st.stop()
@@ -248,7 +261,7 @@ with right:
 st.markdown("### How to demo this")
 st.markdown(
     """
-1. Upload the Excel file.  
+1. Upload the Excel file or use the built-in sample automatically.  
 2. Show the validation tab proving debit/credit balancing.  
 3. Show the mapping preview with transformed subsidiary, location, and currency values.  
 4. Open the payload tab and explain this would be the object sent to NetSuite after approval.
